@@ -11,25 +11,32 @@
 
 MyDB_TableReaderWriterPtr LogicalTableScan :: execute (map <string, MyDB_TableReaderWriterPtr> &allTableReaderWriters,
 	map <string, MyDB_BPlusTreeReaderWriterPtr> &allBPlusReaderWriters) {
+	if (allBPlusReaderWriters.find(inputSpec->getName()) != allBPlusReaderWriters.end()) {
+		MyDB_BPlusTreeReaderWriterPtr bPlusReaderWriter = allBPlusReaderWriters[inputSpec->getName()];
+		MyDB_BufferManagerPtr bufferMgr = bPlusReaderWriter->getBufferMgr();
+		MyDB_TableReaderWriterPtr outputTable = make_shared<MyDB_TableReaderWriter>(outputSpec, bufferMgr);
 
-	// your code here!
-
-	string tableName = inputSpec->getName();
-	MyDB_TableReaderWriterPtr tableRW = allTableReaderWriters[tableName];
-	MyDB_TableReaderWriterPtr outputTable = make_shared<MyDB_TableReaderWriter>(tableRW->getTable(), tableRW->getBufferMgr());
-
-	// If a B+ Tree index exists, use it for a fast scan (optional)
-	if (allBPlusReaderWriters.count(tableName) > 0) {
-		MyDB_BPlusTreeReaderWriterPtr bPlusTree = allBPlusReaderWriters[tableName];
-		BPlusSelection selection(bPlusTree, outputTable, nullptr, nullptr, "", {});
-		selection.run();
-	} else {
-		// Otherwise, use a regular scan
-		RegularSelection selection(tableRW, outputTable, "", {});
-		selection.run();
+		// ...
 	}
-	tableRW->getBufferMgr()->killTable(outputTable->getTable());
-	return outputTable;
+
+	MyDB_BufferManagerPtr bufferMgr = allTableReaderWriters[inputSpec->getName()]->getBufferMgr();
+	MyDB_TableReaderWriterPtr inputTable = make_shared<MyDB_TableReaderWriter>(inputSpec, bufferMgr);
+
+	vector<string> projections;
+	for (auto &att: outputSpec->getSchema()->getAtts()) {
+		projections.push_back("[" + att.first + "]");
+	}
+
+	MyDB_TableReaderWriterPtr outputTable = make_shared <MyDB_TableReaderWriter> (outputSpec, bufferMgr);
+	string curPred = selectionPred[0]->toString();
+	for (int i = 1; i < selectionPred.size(); i++) {
+		curPred = "&& (" + curPred + ", " + selectionPred[i]->toString() + ")";
+	}
+
+	RegularSelection RS(inputTable, outputTable, curPred, projections);
+	RS.run();
+
+	return make_shared<MyDB_TableReaderWriter>(outputSpec, bufferMgr);
 }
 
 MyDB_TableReaderWriterPtr LogicalJoin :: execute (map <string, MyDB_TableReaderWriterPtr> &allTableReaderWriters,

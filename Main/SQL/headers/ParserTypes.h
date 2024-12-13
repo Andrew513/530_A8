@@ -239,6 +239,7 @@ public:
 	}		
 	
 	pair<LogicalOpPtr, double>  optimizeQuery (map <string, MyDB_TablePtr> &allTables) {
+		cout << "Optimizing query\n";
 		return myQuery.optimizeQueryPlan (allTables);
 	}
 

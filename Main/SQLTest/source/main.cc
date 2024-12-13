@@ -162,7 +162,7 @@ int main (int numArgs, char **args) {
 						}
 
 					} else if (final->isSFWQuery ()) {
-
+						cout<< "Query in main 165: " << parseMe << "\n";
 						pair<LogicalOpPtr, double> myPlan = final->optimizeQuery (allTables);
 						final->execute (allTableReaderWriters, allBPlusReaderWriters, myPlan.first);
 					}
